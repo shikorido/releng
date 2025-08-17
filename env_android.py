@@ -20,10 +20,11 @@ def init_machine_config(machine: MachineSpec,
                         outdir: Path):
     ndk_found = False
     try:
+        ndk_found = True
         ndk_root = Path(environ["ANDROID_NDK_ROOT"])
-        if ndk_root.is_absolute():
-            ndk_props_file = ndk_root / "source.properties"
-            ndk_found = ndk_props_file.exists()
+        #if ndk_root.is_absolute():
+        #    ndk_props_file = ndk_root / "source.properties"
+        #    ndk_found = ndk_props_file.exists()
     except:
         pass
     if not ndk_found:
@@ -41,9 +42,19 @@ def init_machine_config(machine: MachineSpec,
 
     android_build_os = "darwin" if build_machine.os == "macos" else build_machine.os
     android_build_arch = "x86_64" if build_machine.os in {"macos", "linux"} else build_machine.arch
-    android_api = 19 if machine.arch in {"x86", "arm"} else 21
+    android_api = 21 if machine.arch in {"x86", "arm"} else 21
+    # My ndk sysroots support api21 at minimum.
+    # Frida assumes api19 for x86/arm.
+    #
+    # 21 is a default api frida chooses.
+    # Since API24 the following
+    # net functions were introduced:
+    # getifaddrs   freeifaddrs
+    # if_nameindex if_freenameindex
 
-    llvm_bindir = ndk_root / "toolchains" / "llvm" / "prebuilt" / f"{android_build_os}-{android_build_arch}" / "bin"
+    llvm_bindir = Path("/data/data/com.termux/files/usr/bin") #ndk_root / "toolchains" / "llvm" / "prebuilt" / f"{android_build_os}-{android_build_arch}" / "bin"
+    prefix = "/data/data/com.termux/files/usr"
+    sysroot = "/data/data/com.termux/files/home/opt/sysroots/ndk/arm" if machine.arch == "arm" else "/data/data/com.termux/files/home/opt/sysroots/ndk/arm64"
 
     binaries = config["binaries"]
     for (identifier, tool_name, *rest) in NDK_BINARIES:
@@ -61,20 +72,42 @@ def init_machine_config(machine: MachineSpec,
 
     common_flags = [
         "-target", f"{machine.cpu}-none-linux-android{android_api}",
+        "--sysroot", sysroot,
     ]
     c_like_flags = [
+        "-v",
+        #"-Wl,--verbose",
+        "-fno-termux-rpath",
         "-DANDROID",
+        "-D__ANDROID__",
+        #f"-D__ANDROID_API__={android_api}",
         "-ffunction-sections",
         "-fdata-sections",
+        #f"-I{prefix}/include",
+        #"-Wno-error=int-conversion",
+        #"-Wno-error=declaration-after-statement",
+        #"-Wno-error=incompatible-pointer-types",
     ]
     cxx_like_flags = []
     cxx_link_flags = [
-        "-static-libstdc++",
+        #"-static-libstdc++",
     ]
     linker_flags = [
+        "-v",
+        "-Wl,--verbose",
+        "-fuse-ld=lld",
+        "-fno-termux-rpath",
         "-Wl,-z,relro",
         "-Wl,-z,noexecstack",
         "-Wl,--gc-sections",
+        #"-L/system/lib64",
+        #"-L/vendor/lib64",
+        #"-L/odm/lib64",
+        #"-L/product/lib64",
+        #f"-L{sysroot}/usr/lib",
+        #f"-L{sysroot}/usr/lib/aarch64-linux-android/{android_api}",
+        #"-L/data/data/com.termux/files/usr/lib",
+        #f"-Wl,--rpath=/system/lib64:/vendor/lib64:/odm/lib64:/product/lib64:{sysroot}/usr/lib:{sysroot}/usr/lib/aarch64-linux-android/{android_api}",
     ]
 
     read_envflags = lambda name: shlex.split(environ.get(name, ""))

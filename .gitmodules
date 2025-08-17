@@ -1,6 +1,7 @@
 [submodule "meson"]
 	path = meson
-	url = https://github.com/frida/meson.git
+	url = git@github.com:shikorido/meson.git
+	branch = termux_build
 [submodule "tomlkit"]
 	path = tomlkit
 	url = https://github.com/python-poetry/tomlkit.git

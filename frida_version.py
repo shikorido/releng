@@ -63,6 +63,13 @@ def detect(repo: Path) -> FridaVersion:
         else:
             commit = tokens[0]
 
+        #qqq_hardcode_version
+        major = 17
+        minor = 2
+        micro = 15
+        nano = 0
+        version_name = f"{major}.{minor}.{micro}"
+
     return FridaVersion(version_name, major, minor, micro, nano, commit)
 
 
